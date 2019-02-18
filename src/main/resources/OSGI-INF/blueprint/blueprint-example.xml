@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+         http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+
+    <bean id="tfsToRedmineMapper" class="com.stackabuse.example.TfsToRedmineMapper"/>
+    <bean id="myBean" class="com.stackabuse.example.MyBean"/>
+
+    <camelContext xmlns="http://camel.apache.org/schema/blueprint" streamCache="true">
+
+        <onException>
+            <exception>org.apache.camel.http.common.HttpOperationFailedException</exception>
+            <onWhen>
+                <method ref="myBean" method="parseException"/>
+            </onWhen>
+            <handled>
+                <constant>true</constant>
+            </handled>
+            <log message=" *** IN Exception block"/>
+            <to uri="mock:response"/>
+        </onException>
+
+        <route id="for_test" handleFault="true">
+            <from uri="direct:start"/>
+            <setBody>
+                <constant>null</constant>
+            </setBody>
+            <setHeader headerName="CamelHttpMethod">
+                <constant>GET</constant>
+            </setHeader>
+            <to uri="https4://cat-fact.herokuapp.com/facts/591f98803b90f7150a19c222"/>
+            <!--We never get to AMQ because http call above throws 404 -->
+            <to uri="direct:assume_amq"/>
+            <!--<to uri="jetty:http://0.0.0.0:8082/test" />-->
+        </route>
+
+        <route>
+            <from uri="direct:assume_amq"/>
+            <log message="In AMQ"/>
+        </route>
+
+        <!--<route>-->
+        <!--<from uri="jetty:http://0.0.0.0:8082/test"/>-->
+        <!--<inOnly uri="activemq://from_tfs"/>-->
+        <!--</route>-->
+
+        <!--<route>-->
+        <!--<from uri="activemq://from_tfs"/>-->
+        <!--<process ref="tfsToRedmineMapper"/>-->
+        <!--<to uri="activemq://for_redmine"/>-->
+        <!--</route>-->
+
+        <!--<route>-->
+        <!--<from uri="activemq://for_redmine"/>-->
+        <!--<setHeader headerName="Content-Type">-->
+        <!--<constant>application/json; charset=utf-8</constant>-->
+        <!--</setHeader>-->
+        <!--<setHeader headerName="X-Redmine-API-Key">-->
+        <!--<constant>beb50ea768f5d16c96030a9dbbf3cb5c4a5ccdcd</constant>-->
+        <!--</setHeader>-->
+        <!--<toD uri="${header.url}"/>-->
+        <!--</route>-->
+
+
+    </camelContext>
+
+</blueprint>
